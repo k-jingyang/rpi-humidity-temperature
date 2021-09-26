@@ -1,7 +1,7 @@
 ## PIN Setup
-DHT22 Out ~ GPIO14
-DHT22 + ~ 3V3
-DHT22 - ~ GND 
+DHT22 Out ~ GPIO14  
+DHT22 + ~ 3V3  
+DHT22 - ~ GND  
 
 
 ## Dev Setup
