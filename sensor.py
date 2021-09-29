@@ -11,10 +11,6 @@ import collector_pb2
 
 # dht_device = adafruit_dht.DHT22(D14)
 
-# Should the Parquet file contain time too? Are timestamps treated specially as compared to normal data?
-
-_PERSIST_INTERVAL = 10
-
 def poll(stub : collector_pb2_grpc.CollectorStub):
     tick = 0 
     data = []
@@ -37,15 +33,6 @@ def poll(stub : collector_pb2_grpc.CollectorStub):
             stub.SendReading(reading)
 
             data.append(data_point)
-
-            if tick % _PERSIST_INTERVAL == 0:
-                df = pd.DataFrame(data,  columns=["humidity", "temperature"])
-
-                # How to append to Parquet file? You can't
-                write('outfile.parquet', df)
-                tick = 0
-                data = []
-
 
         except Exception as e:
             print(e)
