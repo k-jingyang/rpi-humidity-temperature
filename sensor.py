@@ -1,39 +1,56 @@
-# import random
+import random
+import pandas as pd
 from fastparquet import write
 from time import sleep
-import pandas as pd
-from board import D14
-import adafruit_dht
+# from board import D14
+# import adafruit_dht
 
-dht_device = adafruit_dht.DHT22(D14)
+import grpc
+import collector_pb2_grpc
+import collector_pb2
+
+# dht_device = adafruit_dht.DHT22(D14)
 
 # Should the Parquet file contain time too? Are timestamps treated specially as compared to normal data?
 
-data = []
-tick = 0
-PERSIST_INTERVAL = 10
+_PERSIST_INTERVAL = 10
 
-while True:
-    try:
-        sleep(1)
-        tick += 1
-        humidity =  dht_device.humidity # random.random() * 76.6
-        temperature = dht_device.temperature # random.random() * 29.6
+def poll(stub : collector_pb2_grpc.CollectorStub):
+    tick = 0 
+    data = []
+    
+    while True:
+        try:
+            sleep(1)
+            tick += 1
 
-        print("Humidity:", humidity)
-        print("Temparature:", temperature)
+            humidity =  random.random() * 76.6 # dht_device.humidity 
+            temperature = random.random() * 29.6 # dht_device.temperature 
 
-        data_point = [humidity, temperature]
-        data.append(data_point)
+            print("Humidity:", humidity)
+            print("Temparature:", temperature)
 
-        if tick % PERSIST_INTERVAL == 0:
-            df = pd.DataFrame(data,  columns=["humidity", "temperature"])
+            data_point = [humidity, temperature]
 
-            # How to append to Parquet file? You can't
-            write('outfile.parquet', df)
-            tick = 0
-            data = []
+            # May want to yield this instead
+            reading = collector_pb2.Reading(humidity=humidity, temperature=temperature)
+            stub.SendReading(reading)
+
+            data.append(data_point)
+
+            if tick % _PERSIST_INTERVAL == 0:
+                df = pd.DataFrame(data,  columns=["humidity", "temperature"])
+
+                # How to append to Parquet file? You can't
+                write('outfile.parquet', df)
+                tick = 0
+                data = []
 
 
-    except Exception as e:
-        continue
+        except Exception as e:
+            print(e)
+            continue
+
+with grpc.insecure_channel('localhost:8080') as channel:
+    stub = collector_pb2_grpc.CollectorStub(channel)
+    poll(stub)

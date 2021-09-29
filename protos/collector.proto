@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+service Collector {
+    rpc SendReading(Reading) returns (CollectorResponse);
+}
+
+message Reading {
+    double temperature = 1;
+    double humidity = 2; 
+}
+
+message CollectorResponse {
+
+}
