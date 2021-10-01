@@ -1,6 +1,8 @@
 from time import sleep
 import logging as log
 import os
+import threading
+from queue import SimpleQueue
 
 from board import D14
 import adafruit_dht
@@ -16,14 +18,18 @@ log.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
     datefmt='%Y-%m-%d %H:%H:%S')
 
-def poll(stub : collector_pb2_grpc.CollectorStub):
-    tick = 0 
-    data = []
-    
+def send_to_collector(queue: SimpleQueue):
+    with grpc.insecure_channel('192.168.0.161:8080') as channel:
+        stub = collector_pb2_grpc.CollectorStub(channel)
+        while True:
+            (temperature, humidity) = queue.get()
+            reading = collector_pb2.Reading(temperature=temperature, humidity=humidity)
+            stub.SendReading(reading)
+
+def poll(queue: SimpleQueue):
     while True:
         try:
             sleep(1)
-            tick += 1
 
             humidity =   dht_device.humidity 
             temperature = dht_device.temperature 
@@ -34,14 +40,16 @@ def poll(stub : collector_pb2_grpc.CollectorStub):
             log.debug("Humidity: %s", humidity)
             log.debug("Temperature: %s", temperature)
 
-            # May want to yield this instead
-            reading = collector_pb2.Reading(humidity=humidity, temperature=temperature)
-            stub.SendReading(reading)
+            queue.put((temperature, humidity))
 
         except RuntimeError as e:
             log.warning(e)
             continue
 
-with grpc.insecure_channel('192.168.0.161:8080') as channel:
-    stub = collector_pb2_grpc.CollectorStub(channel)
-    poll(stub)
+queue = SimpleQueue();
+poller = threading.Thread(target=poll, args=[queue])
+sender = threading.Thread(target=send_to_collector, args=[queue])
+
+poller.start()
+sender.start()
+poller.join()
