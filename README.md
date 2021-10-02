@@ -1,7 +1,7 @@
 ## Architecture - Maybe?
 Sensor - `sensor.py` that retrieves humidity and temperature readings from the sensor and sends it over the wire using gRPC to the Collector.
-Collector - Receives readings from the Sensor and writes them into a Parquet file  
-Ingester - Reads the values from the Parquet file and ingest it into a TSDB (InfluxDB?) and will trim the file after ingesting the values  
+Collector - Receives readings from the Sensor and writes them into multiple Parquet files
+Ingester - Reads the values from the Parquet files and ingest it into a TSDB (InfluxDB?) and will trim the file after ingesting the values  
 
 Uses Nomad to orchestrate Collector and Ingester
 
@@ -12,9 +12,10 @@ Uses Nomad to orchestrate Collector and Ingester
 
 ## Learnt
 - Avoid growing your DataFrame when accumulating your data. [link](https://stackoverflow.com/a/62734983)
-- Parquet is not a plain text file
+- Parquet is a binary file format
+    - Generally not a good idea to append [link](https://issues.apache.org/jira/browse/SPARK-18199), but why does Spark provide the API for it? Maybe, it's still creating new files BTS? [link](https://stackoverflow.com/questions/39234391/how-to-append-data-to-an-existing-parquet-file)
 - Check ahead of time, if a binary can be installed on an ARM board
-- Follow when guides tell you to use a pull-up resistor? 
+- Use `parquet-tools` to read a Parquet file 
 
 ## PIN Setup
 DHT22 Out ~ GPIO14  
