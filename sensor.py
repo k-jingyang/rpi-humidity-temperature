@@ -18,12 +18,28 @@ log.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
     datefmt='%Y-%m-%d %H:%H:%S')
 
+# Can this be defined in .proto?
+service_config = {
+    "retry_policy" : {
+        "maxAttempts": 5,
+        "initialBackoff": "1s",
+        "maxBackoff": "10s",
+        "backoffMultiplier": 2,
+        "retryableStatusCodes": [
+            "RESOURCE_EXHAUSTED",
+            "UNAVAILABLE"
+        ]
+    }
+}
+
 def send_to_collector(queue: SimpleQueue):
+    # How can I retry this?
     with grpc.insecure_channel('192.168.0.161:8080') as channel:
         stub = collector_pb2_grpc.CollectorStub(channel)
         while True:
             (temperature, humidity) = queue.get()
             reading = collector_pb2.Reading(temperature=temperature, humidity=humidity)
+            # How can I retry this?
             stub.SendReading(reading)
 
 def poll(queue: SimpleQueue):
@@ -52,4 +68,3 @@ sender = threading.Thread(target=send_to_collector, args=[queue])
 
 poller.start()
 sender.start()
-poller.join()
